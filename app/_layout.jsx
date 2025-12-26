@@ -10,6 +10,8 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 
+import { ThemeProvider } from "./src/theme/ThemeContext";
+
 import { Text } from 'react-native';
 
 export default function RootLayout() {
@@ -23,8 +25,10 @@ export default function RootLayout() {
   if (!fontsLoaded) return <Text />;
 
   return (
-    <QueryClientProvider client={queryClientFn}>
+   <ThemeProvider>
+     <QueryClientProvider client={queryClientFn}>
       <Stack screenOptions={{ headerShown: false }} />
     </QueryClientProvider>
+   </ThemeProvider>
   );
 }
