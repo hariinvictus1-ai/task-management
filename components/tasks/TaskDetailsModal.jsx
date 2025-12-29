@@ -1,15 +1,22 @@
 import { Picker } from '@react-native-picker/picker';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+
 import {
+  Alert,
   Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { updateTask } from '../../app/api/tasks.api';
 import { useAppTheme } from '../../app/src/theme/ThemeContext';
 import { ProgressInput } from './ProgressInput';
 import { TaskDetailRow } from './TaskDetailRow';
+
+
 
 const STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
@@ -21,6 +28,9 @@ export function TaskDetailsModal({ visible, task, onClose }) {
   const { colors } = useAppTheme();
   const [mode, setMode] = useState('view');
   const [form, setForm] = useState(null);
+  const router = useRouter();
+
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!task) return;
@@ -123,14 +133,31 @@ export function TaskDetailsModal({ visible, task, onClose }) {
                     styles.primaryButton,
                     { backgroundColor: colors.primary },
                   ]}
-                  onPress={() => {
-                    const payload = {
-                      status: form.status,
-                      progess: Number(form.progress || 0),
-                    };
-                    console.log('SAVE PAYLOAD 👉', payload);
-                    setMode('view');
+                  onPress={async () => {
+                    try {
+                      const payload = {
+                        status: form.status,
+                        progress: Number(form.progress || 0),
+                        id: task.id,
+                      };
+
+                      await updateTask(payload);
+
+                      queryClient.invalidateQueries({ queryKey: ['userTaskDetails'] });
+
+                      Alert.alert('Success', 'Task updated successfully');
+
+                      setMode('view');
+                      onClose();
+                    } catch (error) {
+
+                      Alert.alert(
+                        'Update failed',
+                        'Unable to update task. Please try again.'
+                      );
+                    }
                   }}
+
                 >
                   <Text style={[styles.buttonText, { color: '#fff' }]}>
                     Save

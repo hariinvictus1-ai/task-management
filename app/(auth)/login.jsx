@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     KeyboardAvoidingView,
@@ -10,6 +11,7 @@ import {
 } from 'react-native';
 import { login } from '../api/auth.api';
 import { useAppTheme } from '../src/theme/ThemeContext';
+import { saveToken } from './authStorage';
 
 export default function LoginScreen() {
     const { colors } = useAppTheme();
@@ -17,17 +19,12 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-
-    const handleLogin = () => {
+    const router = useRouter()
+    const handleLogin = async () => {
         setLoading(true);
-
-        console.log(email , password, 24444)
-
-        login({email,password})
-
-        setTimeout(() => {
-            setLoading(false);
-        }, 1000);
+        let data = await login({ email, password })
+        await saveToken(data.data.token);
+        router.replace("/tasks")
     };
 
     return (

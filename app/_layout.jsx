@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
 import queryClientFn from "./query/queryClient";
 
 import {
@@ -12,6 +12,7 @@ import {
 
 import { ThemeProvider } from "./src/theme/ThemeContext";
 
+import { useEffect } from 'react';
 import { Text } from 'react-native';
 
 export default function RootLayout() {
@@ -22,13 +23,20 @@ export default function RootLayout() {
     InterBold: Inter_700Bold,
   });
 
+  useEffect(() => {
+    <Redirect href="/login" />
+  }, [])
+
+
+  if (!fontsLoaded) return <Text />;
   if (!fontsLoaded) return <Text />;
 
+
   return (
-   <ThemeProvider>
-     <QueryClientProvider client={queryClientFn}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </QueryClientProvider>
-   </ThemeProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClientFn}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

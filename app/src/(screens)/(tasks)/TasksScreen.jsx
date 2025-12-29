@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
@@ -17,14 +18,17 @@ import { useAppTheme } from '../../theme/ThemeContext';
 
 export function TasksScreen() {
     const { colors } = useAppTheme();
-    const { data, isLoading, error } = useQuery({
+    const {
+        data,
+        isLoading,
+        error,
+        isFetching,
+        refetch,
+    } = useQuery({
         queryKey: ['userTaskDetails'],
-        queryFn: getUserTasks
-    })
+        queryFn: getUserTasks,
+    });
 
-    useEffect(() => {
-        console.log(data, "data")
-    }, [data])
 
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -39,6 +43,29 @@ export function TasksScreen() {
         setSelectedTask(null);
     };
 
+
+    if (isLoading) {
+        return (
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loaderText, { color: colors.textSecondary }]}>
+                    Loading tasks…
+                </Text>
+            </View>
+        );
+    }
+
+
+
+    if (error) {
+        return (
+            <View style={[styles.loader, { backgroundColor: colors.background }]}>
+                <Text style={{ color: colors.textPrimary }}>
+                    Failed to load tasks
+                </Text>
+            </View>
+        );
+    }
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
 
@@ -51,7 +78,10 @@ export function TasksScreen() {
                         task={item}
                         onPress={() => openTask(item)}
                     />
+
                 )}
+                refreshing={isFetching}
+                onRefresh={refetch}
                 showsVerticalScrollIndicator={false}
             />
             <View style={[styles.bottomBar, { backgroundColor: colors.card }]}>
@@ -104,4 +134,14 @@ const styles = StyleSheet.create({
         width: 1,
         height: '60%',
     },
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loaderText: {
+        marginTop: 12,
+        fontSize: 14,
+    },
+
 });

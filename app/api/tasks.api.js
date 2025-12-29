@@ -1,15 +1,28 @@
-import axios from "axios";
+import instance from "../(auth)/axios.instance";
 
-export async function getUserTasks(){
-    
-    try {
-        const employeeId = 13;
-        let res = await axios.get(`http://192.168.0.115:3000/api/v1/tasks?employee_id=${employeeId}`);
-        return res.data
-        
-    } catch (error) {
-        console.log(error.message)
-    }
+export async function getUserTasks() {
+  try {
+    const res = await instance.get('/tasks');
+    return res.data;
+  } catch (error) {
+    console.error('getUserTasks failed:', error);
+    throw error; 
+  }
+}
 
+export async function updateTask({ status, progress, id }) {
+  try {
+    const res = await instance.patch(`/tasks/${id}`, {
+      task: {
+        status,
+        progress,
+      },
+    });
+
+    return res.data; 
+  } catch (error) {
+    console.error('updateTask failed:', error);
+    throw error;
+  }
 }
 

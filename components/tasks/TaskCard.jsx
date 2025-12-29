@@ -9,7 +9,7 @@ const STATUS_COLORS = {
   in_progress: '#3B82F6',
 };
 
-export function TaskCard({ task , onPress }) {
+export function TaskCard({ task, onPress }) {
   const { colors, scheme } = useAppTheme();
   const statusColor = STATUS_COLORS[task.status] || '#9CA3AF';
 
@@ -23,14 +23,12 @@ export function TaskCard({ task , onPress }) {
           backgroundColor: colors.card,
           borderColor: `${statusColor}33`,
         },
-        
       ]}
     >
-      {/* Status bar */}
+
       <View style={[styles.statusBar, { backgroundColor: statusColor }]} />
 
       <View style={styles.content}>
-        {/* Top row */}
         <View style={styles.topRow}>
           <Text style={[styles.taskId, { color: colors.muted }]}>
             #{task.id}
