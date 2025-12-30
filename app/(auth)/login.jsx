@@ -9,9 +9,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from "../(auth)/authContext";
 import { login } from '../api/auth.api';
 import { useAppTheme } from '../src/theme/ThemeContext';
-import { saveToken } from './authStorage';
+import { saveToken, saveUserDeatails } from './authStorage';
 
 export default function LoginScreen() {
     const { colors } = useAppTheme();
@@ -19,11 +20,17 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const router = useRouter()
+    const router = useRouter();
+
+    const { setUser } = useAuth()
     const handleLogin = async () => {
         setLoading(true);
         let data = await login({ email, password })
-        await saveToken(data.data.token);
+        setUser(data?.data?.employee)
+        console.log(data, "==11==11=1=1==1= data")
+        console.log(data?.data?.employee)
+        await saveToken(data?.data?.token);
+        await saveUserDeatails(data.data.employee)
         router.replace("/tasks")
     };
 
@@ -41,7 +48,6 @@ export default function LoginScreen() {
                     Login to continue
                 </Text>
 
-                {/* Email */}
                 <TextInput
                     value={email}
                     onChangeText={setEmail}

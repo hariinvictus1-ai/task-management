@@ -7,13 +7,22 @@ import { useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { View } from 'react-native';
 
-import { removeToken } from '../(auth)/authStorage';
+import { useEffect, useState } from 'react';
+import { getUserDetails, removeToken } from '../(auth)/authStorage';
 import { useAppTheme } from '../src/theme/ThemeContext';
-
 
 export default function DrawerLayout() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    async function getUserData(params) {
+      let data = await getUserDetails();
+      setUser(data)
+    }
+    getUserData()
+  }, [])
 
   const handleLogout = async () => {
     await removeToken();
@@ -23,13 +32,8 @@ export default function DrawerLayout() {
   return (
     <Drawer
       drawerContent={(props) => (
-        <DrawerContentScrollView
-          {...props}
-          contentContainerStyle={{ flex: 1 }}   
-        >
-  
+        <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1 }}>
           <DrawerItemList {...props} />
-
           <View style={{ flex: 1 }} />
           <DrawerItem
             label="Logout"
@@ -50,6 +54,28 @@ export default function DrawerLayout() {
         headerTintColor: colors.textPrimary,
         sceneContainerStyle: { backgroundColor: colors.background },
       }}
-    />
+    >
+      {/* EMPLOYEE */}
+      {user?.role === 'employee' && (
+        <>
+          <Drawer.Screen name="Tasks" options={{ title: 'Tasks' }} />
+          <Drawer.Screen name="Reviews" options={{ title: 'Reviews' }} />
+        </>
+      )}
+
+      {/* MANAGER & LEAD */}
+      {(user?.role === 'manager' || user?.role === 'lead') && (
+        <>
+          <Drawer.Screen name="Tasks" options={{ title: 'Tasks' }} />
+          <Drawer.Screen name="Goals" options={{ title: 'Goals' }} />
+          <Drawer.Screen name="Reviews" options={{ title: 'Reviews' }} />
+        </>
+      )}
+
+      {/* ADMIN */}
+      {user?.role === 'admin' && (
+        <Drawer.Screen name="Employees" options={{ title: 'Employees' }} />
+      )}
+    </Drawer>
   );
 }

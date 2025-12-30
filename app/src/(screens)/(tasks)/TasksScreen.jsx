@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -11,6 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 import { TaskCard } from '../../../../components/tasks/TaskCard';
 import { TaskDetailsModal } from '../../../../components/tasks/TaskDetailsModal';
 
+import { getUserDetails } from '../../../(auth)/authStorage';
+import ManagerOrLeadeTaskComponenet from '../../../../components/tasks/ManagerOrLeadeTaskComponenet';
 import { getUserTasks } from '../../../api/tasks.api';
 import { useAppTheme } from '../../theme/ThemeContext';
 
@@ -32,6 +34,17 @@ export function TasksScreen() {
 
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
+
+    const [userRole, setUserRole] = useState(null);
+    useEffect(() => {
+        async function getUserData(params) {
+            let data = await getUserDetails();
+            console.log(JSON.parse(data).role, "role====", data, "datatataatat===============1234")
+            setUserRole(data?.role)
+        }
+        getUserData()
+    }, [])
+
 
     const openTask = (task) => {
         setSelectedTask(task);
@@ -55,6 +68,15 @@ export function TasksScreen() {
         );
     }
 
+    if (data.length == 0) {
+        return (
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
+                <Text style={[styles.loaderText, { color: colors.textSecondary }]}>
+                    No Tasks Found!!!
+                </Text>
+            </View>
+        );
+    }
 
 
     if (error) {
@@ -67,40 +89,45 @@ export function TasksScreen() {
         );
     }
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <>
 
-            <FlatList
-                data={data}
-                keyExtractor={(item) => String(item.id)}
-                contentContainerStyle={styles.list}
-                renderItem={({ item }) => (
-                    <TaskCard
-                        task={item}
-                        onPress={() => openTask(item)}
+            {
+                userRole == "employee" ? <View style={[styles.container, { backgroundColor: colors.background }]}>
+
+                    <FlatList
+                        data={data}
+                        keyExtractor={(item) => String(item.id)}
+                        contentContainerStyle={styles.list}
+                        renderItem={({ item }) => (
+                            <TaskCard
+                                task={item}
+                                onPress={() => openTask(item)}
+                            />
+
+                        )}
+                        refreshing={isFetching}
+                        onRefresh={refetch}
+                        showsVerticalScrollIndicator={false}
                     />
+                    <View style={[styles.bottomBar, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.bottomText, { color: colors.primary }]}>
+                            Sort
+                        </Text>
 
-                )}
-                refreshing={isFetching}
-                onRefresh={refetch}
-                showsVerticalScrollIndicator={false}
-            />
-            <View style={[styles.bottomBar, { backgroundColor: colors.card }]}>
-                <Text style={[styles.bottomText, { color: colors.primary }]}>
-                    Sort
-                </Text>
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <Text style={[styles.bottomText, { color: colors.primary }]}>
-                    Filters
-                </Text>
-            </View>
-            <TaskDetailsModal
-                visible={modalVisible}
-                task={selectedTask}
-                onClose={closeTask}
-            />
-        </View>
+                        <Text style={[styles.bottomText, { color: colors.primary }]}>
+                            Filters
+                        </Text>
+                    </View>
+                    <TaskDetailsModal
+                        visible={modalVisible}
+                        task={selectedTask}
+                        onClose={closeTask}
+                    />
+                </View> : <ManagerOrLeadeTaskComponenet colors={colors} />
+            }
+        </>
     );
 }
 

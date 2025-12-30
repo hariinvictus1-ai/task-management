@@ -1,6 +1,7 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack } from 'expo-router';
-import queryClientFn from "./query/queryClient";
+import { AuthProvider } from "./(auth)/authContext";
+
 
 import {
   Inter_400Regular,
@@ -16,6 +17,8 @@ import { useEffect } from 'react';
 import { Text } from 'react-native';
 
 export default function RootLayout() {
+
+
   const [fontsLoaded] = useFonts({
     InterRegular: Inter_400Regular,
     InterMedium: Inter_500Medium,
@@ -30,13 +33,15 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return <Text />;
   if (!fontsLoaded) return <Text />;
-
+  const queryClient = new QueryClient();
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClientFn}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Stack screenOptions={{ headerShown: false }} />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
