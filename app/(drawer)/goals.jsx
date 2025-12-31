@@ -1,9 +1,9 @@
 import GoalsScreen from "../src/(screens)/goals/GoalsScreen";
 
 
-function GoalsRouter(){
+function GoalsRouter() {
 
-return <GoalsScreen />
+    return <GoalsScreen />
 }
 
 export default GoalsRouter

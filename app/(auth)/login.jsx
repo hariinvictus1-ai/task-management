@@ -26,11 +26,9 @@ export default function LoginScreen() {
     const handleLogin = async () => {
         setLoading(true);
         let data = await login({ email, password })
-        setUser(data?.data?.employee)
-        console.log(data, "==11==11=1=1==1= data")
-        console.log(data?.data?.employee)
-        await saveToken(data?.data?.token);
-        await saveUserDeatails(data.data.employee)
+        await saveToken(data?.token);
+        setUser(data?.employee)
+        await saveUserDeatails(data?.employee)
         router.replace("/tasks")
     };
 

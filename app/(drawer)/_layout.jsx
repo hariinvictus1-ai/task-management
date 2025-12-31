@@ -5,29 +5,68 @@ import {
 } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { View } from 'react-native';
-
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { getUserDetails, removeToken } from '../(auth)/authStorage';
 import { useAppTheme } from '../src/theme/ThemeContext';
+
+const ROLE_SCREENS = {
+  employee: [
+    { name: 'Tasks', title: 'Tasks' },
+    { name: 'Reviews', title: 'Reviews' },
+  ],
+  manager: [
+    { name: 'Tasks', title: 'Tasks' },
+    { name: 'Reviews', title: 'Reviews' },
+  ],
+  lead: [
+    { name: 'Tasks', title: 'Tasks' },
+    { name: 'Reviews', title: 'Reviews' },
+  ],
+  admin: [
+    { name: 'Employees', title: 'Employees' },
+  ],
+};
 
 export default function DrawerLayout() {
   const { colors } = useAppTheme();
   const router = useRouter();
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(undefined); // undefined = loading, null = not logged in
 
+  /* Load user once on mount */
   useEffect(() => {
-    async function getUserData(params) {
-      let data = await getUserDetails();
-      setUser(data)
+    async function loadUser() {
+      const data = await getUserDetails();
+      if (!data) {
+        setUser(null);
+        return;
+      }
+      try {
+        setUser(JSON.parse(data));
+      } catch (error) {
+        setUser(null);
+      }
     }
-    getUserData()
-  }, [])
+    loadUser();
+  }, []);
 
   const handleLogout = async () => {
     await removeToken();
+    setUser(null);
     router.replace('/login');
   };
+
+  // Don't render anything until we know the auth state
+  if (user === undefined) {
+    return null; // You can replace this with a SplashScreen or Loader
+  }
+
+  // If no user or no role, prevent rendering the drawer (or redirect earlier)
+  if (!user || !user.role) {
+    return null;
+  }
+
+  const screens = ROLE_SCREENS[user.role] || [];
 
   return (
     <Drawer
@@ -55,27 +94,13 @@ export default function DrawerLayout() {
         sceneContainerStyle: { backgroundColor: colors.background },
       }}
     >
-      {/* EMPLOYEE */}
-      {user?.role === 'employee' && (
-        <>
-          <Drawer.Screen name="Tasks" options={{ title: 'Tasks' }} />
-          <Drawer.Screen name="Reviews" options={{ title: 'Reviews' }} />
-        </>
-      )}
-
-      {/* MANAGER & LEAD */}
-      {(user?.role === 'manager' || user?.role === 'lead') && (
-        <>
-          <Drawer.Screen name="Tasks" options={{ title: 'Tasks' }} />
-          <Drawer.Screen name="Goals" options={{ title: 'Goals' }} />
-          <Drawer.Screen name="Reviews" options={{ title: 'Reviews' }} />
-        </>
-      )}
-
-      {/* ADMIN */}
-      {user?.role === 'admin' && (
-        <Drawer.Screen name="Employees" options={{ title: 'Employees' }} />
-      )}
+      {screens.map((screen) => (
+        <Drawer.Screen
+          key={screen.name}
+          name={screen.name}
+          options={{ title: screen.title }}
+        />
+      ))}
     </Drawer>
   );
 }

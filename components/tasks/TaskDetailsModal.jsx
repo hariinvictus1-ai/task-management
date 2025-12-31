@@ -11,12 +11,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { getUserDetails } from '../../app/(auth)/authStorage';
 import { updateTask } from '../../app/api/tasks.api';
 import { useAppTheme } from '../../app/src/theme/ThemeContext';
 import { ProgressInput } from './ProgressInput';
 import { TaskDetailRow } from './TaskDetailRow';
-
-
 
 const STATUS_OPTIONS = [
   { label: 'Pending', value: 'pending' },
@@ -28,10 +27,22 @@ export function TaskDetailsModal({ visible, task, onClose }) {
   const { colors } = useAppTheme();
   const [mode, setMode] = useState('view');
   const [form, setForm] = useState(null);
-  const router = useRouter();
+  const [user, setUser] = useState(null);
 
+  const router = useRouter();
   const queryClient = useQueryClient();
 
+  /* ---------------- LOAD USER (ASYNC SAFE) ---------------- */
+  useEffect(() => {
+    async function loadUser() {
+      const storedUser = await getUserDetails();
+      setUser(storedUser ? JSON.parse(storedUser) : null);
+    }
+
+    loadUser();
+  }, []);
+
+  /* ---------------- INIT FORM ---------------- */
   useEffect(() => {
     if (!task) return;
 
@@ -43,8 +54,23 @@ export function TaskDetailsModal({ visible, task, onClose }) {
     setMode('view');
   }, [task]);
 
-  if (!task || !form) return null;
+  if (!task || !form || !user) return null;
 
+  /* ---------------- PERMISSIONS ---------------- */
+  const userId = user.id;
+  const userRole = user.role;
+
+  const isAssignedToMe = task.assigned_to === userId;
+  const isEmployee = userRole === 'employee';
+  const isManagerOrLead = userRole === 'manager' || userRole === 'lead';
+
+  const canEnterEditMode = isEmployee || isManagerOrLead;
+
+  const canEditStatusAndProgress =
+    (isEmployee && isAssignedToMe) ||
+    (isManagerOrLead && isAssignedToMe);
+
+  /* ---------------- HANDLERS ---------------- */
   const handleProgressChange = (value) => {
     const numeric = value.replace(/[^0-9]/g, '');
     const clamped =
@@ -55,6 +81,28 @@ export function TaskDetailsModal({ visible, task, onClose }) {
     setForm({ ...form, progress: clamped });
   };
 
+  const handleSave = async () => {
+    try {
+      const payload = { id: task.id };
+
+      if (canEditStatusAndProgress) {
+        payload.status = form.status;
+        payload.progress = Number(form.progress || 0);
+      }
+
+      await updateTask(payload);
+
+      queryClient.invalidateQueries({ queryKey: ['userTaskDetails'] });
+
+      Alert.alert('Success', 'Task updated successfully');
+      setMode('view');
+      onClose();
+    } catch (error) {
+      Alert.alert('Update failed', 'Unable to update task. Please try again.');
+    }
+  };
+
+  /* ---------------- UI ---------------- */
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -67,18 +115,16 @@ export function TaskDetailsModal({ visible, task, onClose }) {
           <TaskDetailRow label="Task Name" value={task.name} />
           <TaskDetailRow label="Task Type" value={task.task_type} />
           <TaskDetailRow label="Created By" value={task.created_by} />
+
           {task.parent_task && (
             <TaskDetailRow label="Parent Task" value={task.parent_task} />
           )}
+
           <TaskDetailRow label="Start Date" value={task.start_date} />
           <TaskDetailRow label="Due Date" value={task.due_date} />
 
-          {mode === 'view' ? (
-            <TaskDetailRow
-              label="Status"
-              value={form.status.replace('_', ' ')}
-            />
-          ) : (
+          {/* STATUS */}
+          {mode === 'edit' && canEditStatusAndProgress ? (
             <View style={styles.block}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
                 Status
@@ -90,7 +136,7 @@ export function TaskDetailsModal({ visible, task, onClose }) {
                   onValueChange={(v) =>
                     setForm({ ...form, status: v })
                   }
-                  style={{ color: "white" }}
+                  style={{ color: 'white' }}
                 >
                   {STATUS_OPTIONS.map(opt => (
                     <Picker.Item
@@ -102,15 +148,22 @@ export function TaskDetailsModal({ visible, task, onClose }) {
                 </Picker>
               </View>
             </View>
+          ) : (
+            <TaskDetailRow
+              label="Status"
+              value={form.status.replace('_', ' ')}
+            />
           )}
 
+          {/* PROGRESS */}
           <ProgressInput
-            mode={mode}
+            mode={canEditStatusAndProgress ? mode : 'view'}
             value={form.progress}
             onChange={handleProgressChange}
             colors={colors}
           />
 
+          {/* FOOTER */}
           <View style={styles.footer}>
             {mode === 'edit' ? (
               <>
@@ -133,31 +186,7 @@ export function TaskDetailsModal({ visible, task, onClose }) {
                     styles.primaryButton,
                     { backgroundColor: colors.primary },
                   ]}
-                  onPress={async () => {
-                    try {
-                      const payload = {
-                        status: form.status,
-                        progress: Number(form.progress || 0),
-                        id: task.id,
-                      };
-
-                      await updateTask(payload);
-
-                      queryClient.invalidateQueries({ queryKey: ['userTaskDetails'] });
-
-                      Alert.alert('Success', 'Task updated successfully');
-
-                      setMode('view');
-                      onClose();
-                    } catch (error) {
-
-                      Alert.alert(
-                        'Update failed',
-                        'Unable to update task. Please try again.'
-                      );
-                    }
-                  }}
-
+                  onPress={handleSave}
                 >
                   <Text style={[styles.buttonText, { color: '#fff' }]}>
                     Save
@@ -179,26 +208,31 @@ export function TaskDetailsModal({ visible, task, onClose }) {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.primaryButton,
-                    { backgroundColor: colors.primary },
-                  ]}
-                  onPress={() => setMode('edit')}
-                >
-                  <Text style={[styles.buttonText, { color: '#fff' }]}>
-                    Edit
-                  </Text>
-                </TouchableOpacity>
+                {canEnterEditMode && (
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      styles.primaryButton,
+                      { backgroundColor: colors.primary },
+                    ]}
+                    onPress={() => setMode('edit')}
+                  >
+                    <Text style={[styles.buttonText, { color: '#fff' }]}>
+                      Edit
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
           </View>
+
         </View>
       </View>
     </Modal>
   );
 }
+
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   overlay: {
@@ -212,32 +246,22 @@ const styles = StyleSheet.create({
     padding: 16,
     maxHeight: '90%',
   },
-  header: {
-    marginBottom: 16,
-  },
   title: {
     fontSize: 18,
     fontWeight: '700',
   },
-  fieldBlock: {
+  block: {
     marginTop: 12,
   },
   label: {
     fontSize: 12,
     marginBottom: 6,
   },
-  inputWrapper: {
+  pickerWrapper: {
     borderWidth: 1,
     borderRadius: 10,
     overflow: 'hidden',
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 15,
-  },
   footer: {
     marginTop: 24,
     flexDirection: 'row',
@@ -254,33 +278,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  footer: {
-    marginTop: 24,
-    flexDirection: 'row',
-    gap: 12,
-  },
-
   primaryButton: {
-    backgroundColor: '#3B82F6',
     elevation: 2,
   },
-
   secondaryButton: {
     borderWidth: 1,
     backgroundColor: 'transparent',
   },
-
-  button: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
 });

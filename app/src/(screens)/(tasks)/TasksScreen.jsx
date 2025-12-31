@@ -1,25 +1,23 @@
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    FlatList,
     StyleSheet,
     Text,
-    View
+    View,
 } from 'react-native';
 
 import { useQuery } from '@tanstack/react-query';
-import { TaskCard } from '../../../../components/tasks/TaskCard';
-import { TaskDetailsModal } from '../../../../components/tasks/TaskDetailsModal';
 
 import { getUserDetails } from '../../../(auth)/authStorage';
-import ManagerOrLeadeTaskComponenet from '../../../../components/tasks/ManagerOrLeadeTaskComponenet';
 import { getUserTasks } from '../../../api/tasks.api';
 import { useAppTheme } from '../../theme/ThemeContext';
 
-
+import EmployeeTaskComponent from '../../../../components/tasks/EmployeeTaskComponent';
+import ManagerOrLeadeTaskComponenet from '../../../../components/tasks/ManagerOrLeadeTaskComponenet';
 
 export function TasksScreen() {
     const { colors } = useAppTheme();
+
     const {
         data,
         isLoading,
@@ -29,21 +27,20 @@ export function TasksScreen() {
     } = useQuery({
         queryKey: ['userTaskDetails'],
         queryFn: getUserTasks,
+        refetchOnMount: 'always',
     });
-
 
     const [selectedTask, setSelectedTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-
     const [userRole, setUserRole] = useState(null);
+
     useEffect(() => {
-        async function getUserData(params) {
-            let data = await getUserDetails();
-            console.log(JSON.parse(data).role, "role====", data, "datatataatat===============1234")
-            setUserRole(data?.role)
+        async function getUserData() {
+            const stored = await getUserDetails();
+            setUserRole(JSON.parse(stored)?.role);
         }
-        getUserData()
-    }, [])
+        getUserData();
+    }, []);
 
 
     const openTask = (task) => {
@@ -56,7 +53,6 @@ export function TasksScreen() {
         setSelectedTask(null);
     };
 
-
     if (isLoading) {
         return (
             <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
@@ -68,99 +64,40 @@ export function TasksScreen() {
         );
     }
 
-    if (data.length == 0) {
-        return (
-            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
-                <Text style={[styles.loaderText, { color: colors.textSecondary }]}>
-                    No Tasks Found!!!
-                </Text>
-            </View>
-        );
-    }
-
-
     if (error) {
         return (
-            <View style={[styles.loader, { backgroundColor: colors.background }]}>
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
                 <Text style={{ color: colors.textPrimary }}>
                     Failed to load tasks
                 </Text>
             </View>
         );
     }
+
     return (
         <>
-
-            {
-                userRole == "employee" ? <View style={[styles.container, { backgroundColor: colors.background }]}>
-
-                    <FlatList
-                        data={data}
-                        keyExtractor={(item) => String(item.id)}
-                        contentContainerStyle={styles.list}
-                        renderItem={({ item }) => (
-                            <TaskCard
-                                task={item}
-                                onPress={() => openTask(item)}
-                            />
-
-                        )}
-                        refreshing={isFetching}
-                        onRefresh={refetch}
-                        showsVerticalScrollIndicator={false}
-                    />
-                    <View style={[styles.bottomBar, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.bottomText, { color: colors.primary }]}>
-                            Sort
-                        </Text>
-
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                        <Text style={[styles.bottomText, { color: colors.primary }]}>
-                            Filters
-                        </Text>
-                    </View>
-                    <TaskDetailsModal
-                        visible={modalVisible}
-                        task={selectedTask}
-                        onClose={closeTask}
-                    />
-                </View> : <ManagerOrLeadeTaskComponenet colors={colors} />
-            }
+            {userRole === 'employee' ? (
+                <EmployeeTaskComponent
+                    data={data}
+                    isFetching={isFetching}
+                    refetch={refetch}
+                    colors={colors}
+                    selectedTask={selectedTask}
+                    modalVisible={modalVisible}
+                    openTask={openTask}
+                    closeTask={closeTask}
+                />
+            ) : (
+                <ManagerOrLeadeTaskComponenet
+                    colors={colors}
+                    assignedTaks={data}
+                />
+            )}
         </>
     );
 }
 
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    list: {
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 80,
-    },
-    bottomBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 56,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderTopWidth: 1,
-    },
-    bottomText: {
-        flex: 1,
-        textAlign: 'center',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    divider: {
-        width: 1,
-        height: '60%',
-    },
     loaderContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -170,5 +107,4 @@ const styles = StyleSheet.create({
         marginTop: 12,
         fontSize: 14,
     },
-
 });

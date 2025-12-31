@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from './authStorage';
 
 const instance = axios.create({
-  baseURL: 'http://192.168.0.115:3000/api/v1',
+  baseURL: 'http://192.168.1.16:3000/api/v1',
   timeout: 10000,
 });
 
