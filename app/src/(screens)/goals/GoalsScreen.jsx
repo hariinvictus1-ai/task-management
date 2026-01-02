@@ -11,6 +11,7 @@ import {
 
 import { getGoals } from '../../../api/goals.api';
 
+import CreateGoalModal from '../../../../components/goals/CreateGoalModal';
 import { GoalDetailsModal } from '../../../../components/goals/GoalDetailsModal';
 import { useAppTheme } from '../../theme/ThemeContext';
 
@@ -18,7 +19,7 @@ function GoalsScreen() {
     const { colors } = useAppTheme();
     const [selectedGoal, setSelectedGoal] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-
+    const [createGoalModel, setCreateGoalModel] = useState(false);
     const {
         data,
         isLoading,
@@ -83,8 +84,6 @@ function GoalsScreen() {
             </View>
         );
     }
-
-
 
 
     return (
@@ -186,6 +185,22 @@ function GoalsScreen() {
                     setSelectedGoal(null);
                 }}
             />
+
+            <TouchableOpacity
+                style={[
+                    styles.fab,
+                    { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setCreateGoalModel(true)}
+            >
+                <Text style={styles.fabText}>+ Goal</Text>
+            </TouchableOpacity>
+
+            {
+                createGoalModel && <CreateGoalModal visible={createGoalModel} onClose={() => { setCreateGoalModel(false) }} colors={colors} />
+            }
+
+
         </View>
     );
 }
@@ -289,4 +304,20 @@ const styles = StyleSheet.create({
         marginTop: 12,
         fontSize: 14,
     },
+    fab: {
+        position: 'absolute',
+        right: 16,
+        bottom: 72,
+        height: 48,
+        paddingHorizontal: 26,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 6,
+    },
+    fabText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
+    }
 });

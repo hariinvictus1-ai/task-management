@@ -19,6 +19,7 @@ function ManagerOrLeadTaskComponent({ colors, assignedTasks }) {
     const [viewTask, setViewTask] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [createEmployeeVisible, setCreateEmployeeVisible] = useState(false);
+    const [showCreateTask, setShowCreateTask] = useState(false);
 
     const {
         data: createdTasks,
@@ -150,7 +151,7 @@ function ManagerOrLeadTaskComponent({ colors, assignedTasks }) {
                         ]}
                         onPress={() => setCreateEmployeeVisible(true)}
                     >
-                        <Text style={styles.fabText}>+ Employee</Text>
+                        <Text style={styles.fabText}>+ Task</Text>
                     </TouchableOpacity>
                 )}
 
@@ -181,11 +182,13 @@ function ManagerOrLeadTaskComponent({ colors, assignedTasks }) {
                 onClose={closeTask}
             />
 
-            <CreateEmployeeModal
-                visible={createEmployeeVisible}
-                onClose={() => setCreateEmployeeVisible(false)}
-                colors={colors}
-            />
+            {
+                createEmployeeVisible && <CreateEmployeeModal
+                    visible={createEmployeeVisible}
+                    onClose={() => setCreateEmployeeVisible(false)}
+                    colors={colors}
+                />
+            }
         </View>
     );
 }
@@ -244,7 +247,6 @@ const styles = StyleSheet.create({
         width: 1,
         height: '60%',
     },
-
     fab: {
         position: 'absolute',
         right: 16,

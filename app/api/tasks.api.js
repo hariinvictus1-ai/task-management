@@ -30,14 +30,32 @@ export async function updateTask({ status, progress, id }) {
 
 
 export async function getEmployeesForTaskCreation() {
-
   try {
     const res = await instance.get("/employees");
-    console.log(res.data, "resdara==============")
     return res.data
   } catch (error) {
     console.error('updateTask failed:', error);
     throw error;
   }
+}
 
+export async function getParentTasks(params) {
+
+  try {
+    const res = await instance.get("/tasks?scope=parent_tasks")
+    return res.data;
+  } catch (error) {
+    console.error('updateTask failed:', error);
+    throw error;
+  }
+}
+
+export async function createTask(params) {
+  try {
+    const res = await instance.post("/tasks", params.task);
+    return res;
+  } catch (error) {
+    console.error('updateTask failed:', error);
+    throw error;
+  }
 }

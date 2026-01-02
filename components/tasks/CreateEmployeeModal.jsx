@@ -1,5 +1,7 @@
-import { Picker } from '@react-native-picker/picker';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+
 import {
     KeyboardAvoidingView,
     Modal,
@@ -11,33 +13,86 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
 import { getGoals } from '../../app/api/goals.api';
+import { createTask, getEmployeesForTaskCreation, getParentTasks } from '../../app/api/tasks.api';
+import FormDropdown from '../ui/FormDropdown';
 
 function CreateEmployeeModal({
     visible = false,
     onClose = () => { },
     colors = {},
-
-    taskType = 'main',        // 'main' | 'subtask'
-    parentTasks = [],
-    employees =[]
 }) {
-
-
+    const [startDate, setStartDate] = useState(null);
+    const [dueDate, setDueDate] = useState(null);
+    const [activePicker, setActivePicker] = useState(null);
+    const [taskTypeOpen, setTaskTypeOpen] = useState(false);
+    const [taskTypeValue, setTaskTypeValue] = useState(null);
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [taskTypes, setTaskTypes] = useState([
+        { label: 'Main Task', value: 'main' },
+        { label: 'Subtask', value: 'subtask' }
+    ]);
+    const [goalOpen, setGoalOpen] = useState(false);
+    const [goalValue, setGoalValue] = useState(null);
+    const [parentOpen, setParentOpen] = useState(false);
+    const [parentValue, setParentValue] = useState(null);
+    const [assigneeOpen, setAssigneeOpen] = useState(false);
+    const [assigneeValue, setAssigneeValue] = useState(null);
+    const [taskName, setTaskname] = useState("");
+    const [taskDescription, setTaskDescription] = useState("");
     const { data: goals } = useQuery({
         queryKey: ['goals'],
         queryFn: getGoals,
-
     });
 
-    // const {data : employees} = useQuery({
-    //     queryKey:["getEmployees"],
-    //     queryFn:getEmployeesForTaskCreation
-    // })
+    const { data: employees } = useQuery({
+        queryKey: ['employees'],
+        queryFn: getEmployeesForTaskCreation,
+    });
 
-    // useEffect(() => {
-    //     console.log(employees, "======employees")
-    // }, [employees])
+    const { data: parentTasks, isFetching } = useQuery({
+        queryKey: ['parent_tasks', taskTypeValue],
+        queryFn: getParentTasks,
+        enabled: taskTypeValue === 'subtask',
+    });
+
+
+    const formatDate = (date) =>
+        date ? date.toISOString().split('T')[0] : '';
+
+    const goalItems =
+        goals?.map(g => ({ label: g.goal_name, value: g.id })) || [];
+
+    const parentItems =
+        parentTasks?.map(t => ({ label: t.name, value: t.id })) || [];
+
+    const assigneeItems =
+        employees?.map(e => ({ label: e.name, value: e.id })) || [];
+
+    function resetForm() {
+        setTaskname('');
+        setTaskDescription('');
+        setTaskTypeValue(null);
+        setGoalValue(null);
+        setParentValue(null);
+        setAssigneeValue(null);
+        setStartDate(null);
+        setDueDate(null);
+    }
+
+    const queryClient = useQueryClient();
+
+    const { mutate, isPending } = useMutation({
+        mutationFn: (payload) => createTask(payload),
+
+        onSuccess: () => {
+            queryClient.invalidateQueries(['tasks']);
+            resetForm()
+            onClose();
+        },
+    });
+
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
@@ -52,7 +107,6 @@ function CreateEmployeeModal({
                             keyboardShouldPersistTaps="handled"
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {/* Title */}
                             <Text style={[styles.title, { color: colors.textPrimary }]}>
                                 Create Task
                             </Text>
@@ -65,6 +119,9 @@ function CreateEmployeeModal({
                                 placeholder="Enter task name"
                                 placeholderTextColor={colors.textSecondary}
                                 style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
+                                onChange={(e) => {
+                                    setTaskname(e.nativeEvent.text)
+                                }}
                             />
 
                             {/* Description */}
@@ -75,118 +132,103 @@ function CreateEmployeeModal({
                                 placeholder="Enter description"
                                 placeholderTextColor={colors.textSecondary}
                                 multiline
-                                style={[
-                                    styles.textArea,
-                                    { borderColor: colors.border, color: colors.textPrimary },
-                                ]}
+                                style={[styles.textArea, { borderColor: colors.border, color: colors.textPrimary }]}
+                                onChange={(e) => {
+                                    setTaskDescription(e.nativeEvent.text);
+                                }}
                             />
 
                             {/* Task Type */}
-                            <Text style={[styles.label, { color: colors.textSecondary }]}>
-                                Task Type
-                            </Text>
-                            <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
-                                {taskType}
-                            </Text>
+                            <FormDropdown
+                                id="taskType"
+                                label="Task Type"
+                                open={taskTypeOpen}
+                                value={taskTypeValue}
+                                items={taskTypes}
+                                setOpen={setTaskTypeOpen}
+                                setValue={setTaskTypeValue}
+                                setItems={setTaskTypes}
+                                placeholder="Select task type"
+                                zIndex={5000}
+                                colors={colors}
+                                activeDropdown={activeDropdown}
+                                setActiveDropdown={setActiveDropdown}
+                            />
 
-                            {/* Goal (main task only) */}
-                            {taskType === 'main' && (
-                                <>
-                                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                                        Goal
-                                    </Text>
-                                    <View style={[styles.picker, { borderColor: colors.border }]}>
-                                        <Picker
-                                            style={{ color: colors.textPrimary }}
-                                            dropdownIconColor={colors.textPrimary}
-                                        >
-                                            {goals?.map(goal => (
-                                                <Picker.Item
-                                                    key={goal.id}
-                                                    label={goal.goal_name}
-                                                    value={goal.id}
-                                                />
-                                            ))}
-                                        </Picker>
-                                    </View>
-                                </>
+                            {/* Goal */}
+                            {taskTypeValue === 'main' && (
+                                <FormDropdown
+                                    id="goal"
+                                    label="Goal"
+                                    open={goalOpen}
+                                    value={goalValue}
+                                    items={goalItems}
+                                    setOpen={setGoalOpen}
+                                    setValue={setGoalValue}
+                                    placeholder="Select goal"
+                                    zIndex={4000}
+                                    colors={colors}
+                                    activeDropdown={activeDropdown}
+                                    setActiveDropdown={setActiveDropdown}
+                                />
                             )}
 
-                            {/* Parent Task (subtask only) */}
-                            {taskType === 'subtask' && (
-                                <>
-                                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                                        Parent Task
-                                    </Text>
-                                    <View style={[styles.picker, { borderColor: colors.border }]}>
-                                        <Picker
-                                            style={{ color: colors.textPrimary }}
-                                            dropdownIconColor={colors.textPrimary}
-                                        >
-                                            {parentTasks.map(task => (
-                                                <Picker.Item
-                                                    key={task.id}
-                                                    label={task.name}
-                                                    value={task.id}
-                                                />
-                                            ))}
-                                        </Picker>
-                                    </View>
-                                </>
+                            {/* Parent Task */}
+                            {taskTypeValue === 'subtask' && (
+                                <FormDropdown
+                                    id="parent"
+                                    label="Parent Task"
+                                    open={parentOpen}
+                                    value={parentValue}
+                                    items={parentItems}
+                                    setOpen={setParentOpen}
+                                    setValue={setParentValue}
+                                    placeholder="Select parent task"
+                                    zIndex={4000}
+                                    colors={colors}
+                                    activeDropdown={activeDropdown}
+                                    setActiveDropdown={setActiveDropdown}
+                                />
                             )}
 
-                            {/* Assign To */}
-                            <Text style={[styles.label, { color: colors.textSecondary }]}>
-                                Assign To
-                            </Text>
-                            <View style={[styles.picker, { borderColor: colors.border }]}>
-                                <Picker
-                                    style={{ color: colors.textPrimary }}
-                                    dropdownIconColor={colors.textPrimary}
-                                >
-                                    {employees?.map(emp => (
-                                        <Picker.Item
-                                            key={emp.id}
-                                            label={emp.name}
-                                            value={emp.id}
-                                        />
-                                    ))}
-                                </Picker>
-                            </View>
+                            <FormDropdown
+                                id="assignee"
+                                label="Assign To"
+                                open={assigneeOpen}
+                                value={assigneeValue}
+                                items={assigneeItems}
+                                setOpen={setAssigneeOpen}
+                                setValue={setAssigneeValue}
+                                placeholder="Select employee"
+                                searchable
+                                zIndex={3000}
+                                colors={colors}
+                                activeDropdown={activeDropdown}
+                                setActiveDropdown={setActiveDropdown}
+                            />
 
                             {/* Dates */}
                             <Text style={[styles.label, { color: colors.textSecondary }]}>
                                 Start Date
                             </Text>
-                            <TextInput
-                                placeholder="YYYY-MM-DD"
-                                placeholderTextColor={colors.textSecondary}
-                                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                            />
+                            <TouchableOpacity onPress={() => setActivePicker('start')}>
+                                <View style={[styles.input, { borderColor: colors.border, justifyContent: 'center' }]}>
+                                    <Text style={{ color: startDate ? colors.textPrimary : colors.textSecondary }}>
+                                        {startDate ? formatDate(startDate) : 'Select start date'}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
 
                             <Text style={[styles.label, { color: colors.textSecondary }]}>
                                 Due Date
                             </Text>
-                            <TextInput
-                                placeholder="YYYY-MM-DD"
-                                placeholderTextColor={colors.textSecondary}
-                                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                            />
-
-                            {/* Progress (subtask only) */}
-                            {taskType === 'subtask' && (
-                                <>
-                                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                                        Progress (%)
+                            <TouchableOpacity onPress={() => setActivePicker('due')}>
+                                <View style={[styles.input, { borderColor: colors.border, justifyContent: 'center' }]}>
+                                    <Text style={{ color: dueDate ? colors.textPrimary : colors.textSecondary }}>
+                                        {dueDate ? formatDate(dueDate) : 'Select due date'}
                                     </Text>
-                                    <TextInput
-                                        placeholder="0 – 100"
-                                        placeholderTextColor={colors.textSecondary}
-                                        keyboardType="numeric"
-                                        style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                                    />
-                                </>
-                            )}
+                                </View>
+                            </TouchableOpacity>
 
                             {/* Footer */}
                             <View style={styles.footer}>
@@ -200,15 +242,48 @@ function CreateEmployeeModal({
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={[styles.button, { backgroundColor: colors.primary }]}
+                                    style={[
+                                        styles.button,
+                                        { backgroundColor: colors.primary, opacity: isPending ? 0.6 : 1 },
+                                    ]}
+                                    onPress={() =>
+                                        mutate({
+                                            task: {
+                                                name: taskName,
+                                                description: taskDescription,
+                                                task_type: taskTypeValue,
+                                                goal_id: goalValue || null,
+                                                parent_id: parentValue || null,
+                                                assigned_to: assigneeValue,
+                                                start_date: formatDate(startDate),
+                                                due_date: formatDate(dueDate),
+                                            },
+                                        })
+                                    }
+                                    disabled={isPending}
                                 >
                                     <Text style={{ color: '#fff', fontWeight: '700' }}>
-                                        Create
+                                        {isPending ? 'Creating…' : 'Create'}
                                     </Text>
                                 </TouchableOpacity>
-                            </View>
 
+                            </View>
                         </ScrollView>
+
+                        <DateTimePickerModal
+                            isVisible={!!activePicker}
+                            mode="date"
+                            onConfirm={(date) => {
+                                activePicker === 'start' ? setStartDate(date) : setDueDate(date);
+                                setActivePicker(null);
+                            }}
+                            onCancel={() => setActivePicker(null)}
+                            minimumDate={
+                                activePicker === 'start'
+                                    ? new Date()
+                                    : startDate || new Date()
+                            }
+                        />
                     </View>
                 </KeyboardAvoidingView>
             </View>
@@ -217,6 +292,7 @@ function CreateEmployeeModal({
 }
 
 export default CreateEmployeeModal;
+
 
 
 export const styles = StyleSheet.create({
@@ -232,7 +308,7 @@ export const styles = StyleSheet.create({
     },
 
     container: {
-        height: '85%',                 // ✅ FIXED HEIGHT
+        height: '85%',
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 16,
@@ -300,4 +376,21 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         backgroundColor: 'transparent',
     },
+    segmentWrapper: {
+        flexDirection: 'row',
+        borderRadius: 14,
+        backgroundColor: 'transparent',
+        gap: 10,
+        marginTop: 6,
+    },
+
+    segment: {
+        flex: 1,
+        height: 40,
+        borderRadius: 12,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
 });

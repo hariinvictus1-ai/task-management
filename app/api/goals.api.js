@@ -10,3 +10,14 @@ export async function getGoals() {
     }
 
 }
+
+export async function createGoal({ goal }) {
+    try {
+        const res = await instance.post("/goals", goal);
+        return res.data;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error("Error")
+    }
+
+}

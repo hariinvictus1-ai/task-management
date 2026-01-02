@@ -12,21 +12,22 @@ import { useAppTheme } from '../src/theme/ThemeContext';
 
 const ROLE_SCREENS = {
   employee: [
-    { name: 'Tasks', title: 'Tasks' },
-    { name: 'Reviews', title: 'Reviews' },
+    { name: 'tasks', title: 'Tasks' },
+    { name: 'reviews', title: 'Reviews' },
   ],
   manager: [
-    { name: 'Tasks', title: 'Tasks' },
-    { name: 'Reviews', title: 'Reviews' },
+    { name: 'tasks', title: 'Tasks' },
+    { name: 'reviews', title: 'Reviews' },
   ],
   lead: [
-    { name: 'Tasks', title: 'Tasks' },
-    { name: 'Reviews', title: 'Reviews' },
+    { name: 'tasks', title: 'Tasks' },
+    { name: 'reviews', title: 'Reviews' },
   ],
   admin: [
-    { name: 'Employees', title: 'Employees' },
+    { name: 'employees', title: 'Employees' },
   ],
 };
+
 
 export default function DrawerLayout() {
   const { colors } = useAppTheme();
